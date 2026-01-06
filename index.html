@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網頁版踩地雷 v3.0</title>
+    <style>
+        /* --- CSS: 復刻 Windows 95 經典風格 --- */
+        body {
+            background-color: #bdbdbd;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        .window {
+            background-color: #bdbdbd;
+            border: 3px solid white;
+            border-right-color: #7b7b7b;
+            border-bottom-color: #7b7b7b;
+            padding: 6px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* 頂部選單與資訊列 */
+        .controls {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        select {
+            padding: 2px;
+            font-size: 14px;
+        }
+
+        .header {
+            background-color: #bdbdbd;
+            border: 3px solid #7b7b7b;
+            border-right-color: white;
+            border-bottom-color: white;
+            padding: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .counter {
+            background: black;
+            color: red;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 0 5px;
+            width: 50px;
+            text-align: right;
+            border: 2px solid #7b7b7b;
+            border-right-color: white;
+            border-bottom-color: white;
+        }
+
+        .face-btn {
+            width: 36px;
+            height: 36px;
+            font-size: 20px;
+            background-color: #bdbdbd;
+            border: 2px solid white;
+            border-right-color: #7b7b7b;
+            border-bottom-color: #7b7b7b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .face-btn:active {
+            border: 2px solid #7b7b7b;
+            border-right-color: white;
+            border-bottom-color: white;
+        }
+
+        /* 遊戲區域 */
+        #game-board {
+            display: grid;
+            border: 4px solid #7b7b7b;
+            border-right-color: white;
+            border-bottom-color: white;
+            background-color: #bdbdbd;
+        }
+
+        .cell {
+            width: 24px;
+            height: 24px;
+            background-color: #c0c0c0;
+            border: 2px solid white;
+            border-right-color: #7b7b7b;
+            border-bottom-color: #7b7b7b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 16px;
+            cursor: default;
+        }
+
+        .cell.revealed {
+            border: 1px solid #7b7b7b; /* 凹陷效果 */
+            background-color: #dcdcdc;
+            width: 26px; /* 補償邊框變細 */
+            height: 26px;
+        }
+        
+        .cell.mine { background-color: #ff4d4d; }
+        .cell.flag { color: red; }
+        
+        /* 數字顏色 */
+        .c1 { color: blue; }
+        .c2 { color: green; }
+        .c3 { color: red; }
+        .c4 { color: darkblue; }
+        .c5 { color: darkred; }
+        .c6 { color: teal; }
+        .c7 { color: black; }
+        .c8 { color: gray; }
+
+    </style>
+</head>
+<body>
+
+    <div class="window">
+        <div class="controls">
+            <select id="difficulty-select">
+                <option value="0">Lv1. 入門 (8x8)</option>
+                <option value="1" selected>Lv2. 初級 (9x9)</option>
+                <option value="2">Lv3. 中級 (16x16)</option>
+                <option value="3">Lv4. 高級 (30x16)</option>
+                <option value="4">Lv5. 地獄 (30x24)</option>
+            </select>
+        </div>
+
+        <div class="header">
+            <div id="mines-count" class="counter">010</div>
+            <div id="face-btn" class="face-btn">🙂</div>
+            <div id="timer" class="counter">000</div>
+        </div>
+
+        <div id="game-board"></div>
+    </div>
+
+    <script>
+        // --- JavaScript: 遊戲邏輯 ---
+        
+        const difficulties = [
+            { rows: 8, cols: 8, mines: 8 },
+            { rows: 9, cols: 9, mines: 10 },
+            { rows: 16, cols: 16, mines: 40 },
+            { rows: 16, cols: 30, mines: 99 },
+            { rows: 24, cols: 30, mines: 180 }
+        ];
+
+        let config = difficulties[1];
+        let board = [];
+        let revealed = [];
+        let flagged = [];
+        let gameOver = false;
+        let firstClick = true;
+        let flagsCount = 0;
+        let timerInterval;
+        let timeElapsed = 0;
+
+        const boardEl = document.getElementById('game-board');
+        const minesEl = document.getElementById('mines-count');
+        const timerEl = document.getElementById('timer');
+        const faceBtn = document.getElementById('face-btn');
+        const difficultySelect = document.getElementById('difficulty-select');
+
+        // 初始化
+        function initGame() {
+            // 讀取設定
+            config = difficulties[difficultySelect.value];
+            
+            // 重置狀態
+            gameOver = false;
+            firstClick = true;
+            flagsCount = 0;
+            timeElapsed = 0;
+            clearInterval(timerInterval);
+            
+            // 重置 UI
+            minesEl.innerText = config.mines.toString().padStart(3, '0');
+            timerEl.innerText = "000";
+            faceBtn.innerText = "🙂";
+            
+            // 建立陣列
+            board = Array(config.rows).fill().map(() => Array(config.cols).fill(0));
+            revealed = Array(config.rows).fill().map(() => Array(config.cols).fill(false));
+            flagged = Array(config.rows).fill().map(() => Array(config.cols).fill(false));
+
+            renderBoard();
+        }
+
+        // 繪製網格
+        function renderBoard() {
+            boardEl.style.gridTemplateColumns = `repeat(${config.cols}, auto)`;
+            boardEl.innerHTML = '';
+
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    
+                    // 綁定事件
+                    cell.addEventListener('mousedown', (e) => handleInput(e, r, c));
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault(); // 阻止右鍵選單
+                        handleRightClick(r, c);
+                    });
+
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        // 處理輸入 (整合防呆與左右鍵)
+        function handleInput(e, r, c) {
+            if (gameOver) return;
+            
+            if (e.button === 0) { // 左鍵
+                handleLeftClick(r, c);
+            }
+        }
+
+        function handleLeftClick(r, c) {
+            if (flagged[r][c] || revealed[r][c]) return;
+
+            // 第一發防爆機制
+            if (firstClick) {
+                firstClick = false;
+                placeMines(r, c);
+                startTimer();
+            }
+
+            const val = board[r][c];
+            if (val === -1) {
+                triggerGameOver(false, r, c);
+            } else {
+                revealCell(r, c);
+                checkWin();
+            }
+        }
+
+        function handleRightClick(r, c) {
+            if (gameOver || revealed[r][c]) return;
+
+            const cell = getCellEl(r, c);
+            if (flagged[r][c]) {
+                flagged[r][c] = false;
+                flagsCount--;
+                cell.innerText = "";
+                cell.classList.remove('flag');
+            } else {
+                flagged[r][c] = true;
+                flagsCount++;
+                cell.innerText = "🚩";
+                cell.classList.add('flag');
+            }
+            minesEl.innerText = (config.mines - flagsCount).toString().padStart(3, '0');
+        }
+
+        // 放置地雷 (避開 safeR, safeC 及其周圍)
+        function placeMines(safeR, safeC) {
+            let placed = 0;
+            while (placed < config.mines) {
+                let r = Math.floor(Math.random() * config.rows);
+                let c = Math.floor(Math.random() * config.cols);
+
+                // 檢查是否在安全區 (九宮格)
+                if (Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1) continue;
+                if (board[r][c] === -1) continue;
+
+                board[r][c] = -1; // -1 代表地雷
+                placed++;
+            }
+            calculateNumbers();
+        }
+
+        function calculateNumbers() {
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
+                    if (board[r][c] === -1) continue;
+                    let count = 0;
+                    for (let i = r-1; i <= r+1; i++) {
+                        for (let j = c-1; j <= c+1; j++) {
+                            if (i>=0 && i<config.rows && j>=0 && j<config.cols && board[i][j] === -1) {
+                                count++;
+                            }
+                        }
+                    }
+                    board[r][c] = count;
+                }
+            }
+        }
+
+        // 遞迴翻開
+        function revealCell(r, c) {
+            if (r<0 || r>=config.rows || c<0 || c>=config.cols || revealed[r][c] || flagged[r][c]) return;
+
+            revealed[r][c] = true;
+            const cell = getCellEl(r, c);
+            const val = board[r][c];
+            
+            cell.classList.add('revealed');
+            
+            if (val > 0) {
+                cell.innerText = val;
+                cell.classList.add('c' + val);
+            } else {
+                // 如果是 0，擴散
+                for (let i = r-1; i <= r+1; i++) {
+                    for (let j = c-1; j <= c+1; j++) {
+                        revealCell(i, j);
+                    }
+                }
+            }
+        }
+
+        function getCellEl(r, c) {
+            // 透過 data attribute 找 DOM 元素
+            return document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeElapsed++;
+                if (timeElapsed > 999) timeElapsed = 999;
+                timerEl.innerText = timeElapsed.toString().padStart(3, '0');
+            }, 1000);
+        }
+
+        function checkWin() {
+            let safeUnrevealed = 0;
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
+                    if (board[r][c] !== -1 && !revealed[r][c]) {
+                        safeUnrevealed++;
+                    }
+                }
+            }
+            if (safeUnrevealed === 0) {
+                triggerGameOver(true);
+            }
+        }
+
+        function triggerGameOver(win, hitR, hitC) {
+            gameOver = true;
+            clearInterval(timerInterval);
+            
+            if (win) {
+                faceBtn.innerText = "😎";
+                setTimeout(() => alert("恭喜獲勝！耗時: " + timeElapsed + "秒"), 10);
+            } else {
+                faceBtn.innerText = "😵";
+                const hitCell = getCellEl(hitR, hitC);
+                hitCell.classList.add('mine');
+                hitCell.style.backgroundColor = "red";
+
+                // 顯示所有地雷
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols; c++) {
+                        if (board[r][c] === -1) {
+                            const cell = getCellEl(r, c);
+                            if (!flagged[r][c]) {
+                                cell.innerText = "💣";
+                                if (r !== hitR || c !== hitC) cell.classList.add('revealed');
+                            }
+                        } else if (flagged[r][c]) {
+                            // 標錯的
+                            const cell = getCellEl(r, c);
+                            cell.innerText = "❌";
+                            cell.style.backgroundColor = "yellow";
+                        }
+                    }
+                }
+            }
+        }
+
+        // 事件監聽
+        faceBtn.addEventListener('click', initGame);
+        difficultySelect.addEventListener('change', initGame);
+
+        // 啟動
+        initGame();
+
+    </script>
+</body>
+</html>
