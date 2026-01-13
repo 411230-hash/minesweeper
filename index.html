@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高中單字踩地雷 (復活挑戰版)</title>
+    <title>極限單字踩地雷 (Lv1-Lv8)</title>
     <style>
-        /* --- CSS: Windows 95/98 經典風格 --- */
+        /* --- CSS: 風格與佈局 --- */
         body {
             background-color: #bdbdbd;
-            font-family: "Microsoft JhengHei", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-family: "Microsoft JhengHei", sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            height: 100vh; /* 固定高度，讓內部可以捲動 */
             margin: 0;
+            overflow: hidden; /* 防止整個網頁捲動 */
             user-select: none;
         }
 
@@ -25,12 +26,17 @@
             border-bottom-color: #7b7b7b;
             padding: 8px;
             box-shadow: 4px 4px 12px rgba(0,0,0,0.5);
+            
+            /* 讓視窗適應螢幕，並允許內部捲動 */
             max-width: 95vw;
+            max-height: 95vh;
+            display: flex;
+            flex-direction: column;
         }
 
         /* 頂部控制區 */
         .controls {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -41,6 +47,7 @@
             border-bottom-color: white;
             flex-wrap: wrap;
             gap: 5px;
+            flex-shrink: 0; /* 防止被壓縮 */
         }
         
         select { font-size: 14px; padding: 3px; }
@@ -64,7 +71,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
         }
 
         .counter {
@@ -74,7 +82,7 @@
             font-size: 26px;
             font-weight: bold;
             padding: 0 5px;
-            width: 52px;
+            width: 60px; /* 加寬一點以顯示大數字 */
             text-align: right;
             border: 2px solid #7b7b7b;
             border-right-color: white;
@@ -92,34 +100,39 @@
         }
         .face-btn:active { border-style: inset; padding-top: 2px; padding-left: 2px; }
 
-        /* 遊戲區域 */
-        #game-board {
-            display: grid;
+        /* 遊戲區域容器 (負責捲動) */
+        .game-scroll-area {
+            overflow: auto; /* 自動出現捲軸 */
             border: 4px solid #7b7b7b;
             border-right-color: white;
             border-bottom-color: white;
-            margin: 0 auto;
             background: #999;
+            flex-grow: 1; /* 佔滿剩餘空間 */
+        }
+
+        #game-board {
+            display: grid;
+            margin: 0; 
+            /* 讓格子緊密排列 */
         }
 
         .cell {
-            width: 24px; height: 24px;
+            width: 20px; height: 20px; /* 稍微縮小格子以容納更多 */
             background-color: #c0c0c0;
-            border: 2px solid white;
+            border: 1px solid white; /* 邊框變細 */
             border-right-color: #7b7b7b;
             border-bottom-color: #7b7b7b;
             display: flex; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 16px; cursor: default;
+            font-weight: 900; font-size: 12px; cursor: default;
         }
         .cell.revealed {
-            border: 1px solid #7b7b7b;
+            border: 1px solid #999;
             background-color: #dcdcdc;
-            width: 26px; height: 26px; /* 補償邊框寬度 */
+            width: 20px; height: 20px;
         }
-        .cell.mine { background-color: #ff4d4d; border: 1px solid #7b7b7b; width: 26px; height: 26px; }
+        .cell.mine { background-color: #ff4d4d; border: 1px solid #7b7b7b; }
         .cell.flag { color: red; }
         
-        /* 數字顏色 */
         .c1 { color: blue; } .c2 { color: green; } .c3 { color: red; }
         .c4 { color: darkblue; } .c5 { color: darkred; } .c6 { color: teal; }
         .c7 { color: black; } .c8 { color: gray; }
@@ -145,47 +158,27 @@
             text-align: center;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             border: 4px solid #0056b3;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
         }
 
         .quiz-header { color: #d9534f; font-weight: bold; font-size: 22px; margin-bottom: 5px; }
         .quiz-sub { font-size: 14px; color: #555; margin-bottom: 15px; }
         .quiz-word { 
-            font-size: 32px; 
-            color: #222; 
-            font-weight: 800; 
-            margin: 20px 0; 
-            padding: 10px;
-            background: #fff;
-            border: 2px dashed #ccc;
-            border-radius: 5px;
+            font-size: 32px; color: #222; font-weight: 800; 
+            margin: 20px 0; padding: 10px;
+            background: #fff; border: 2px dashed #ccc; border-radius: 5px;
         }
         
         .quiz-options { display: flex; flex-direction: column; gap: 10px; }
-        
         .quiz-options button {
-            padding: 14px;
-            background: #fff;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 17px;
-            text-align: left;
+            padding: 14px; background: #fff;
+            border: 2px solid #ddd; border-radius: 6px;
+            cursor: pointer; font-size: 17px; font-weight: 500;
             transition: all 0.2s;
-            font-weight: 500;
         }
         .quiz-options button:hover { 
-            background: #e9ecef; 
-            border-color: #0056b3; 
-            color: #0056b3;
+            background: #e9ecef; border-color: #0056b3; color: #0056b3;
             transform: translateX(5px);
         }
-        .quiz-options button:active { transform: scale(0.98); }
 
     </style>
 </head>
@@ -194,145 +187,102 @@
     <div class="window">
         <div class="controls">
             <select id="difficulty-select">
-                <option value="0">Lv1. 入門 (練習用) - 無限復活</option>
-                <option value="1" selected>Lv2. 中級 (9x9) - 3次機會</option>
-                <option value="2">Lv3. 高級 (16x16) - 4次機會</option>
-                <option value="3">Lv4. 地獄 (30x16) - 5次機會</option>
+                <option value="0">Lv1. 入門 (8x8) - 練習用</option>
+                <option value="1">Lv2. 初級 (9x9) - 3命</option>
+                <option value="2">Lv3. 中級 (16x16) - 4命</option>
+                <option value="3" selected>Lv4. 高級 (20x20) - 5命</option>
+                <option value="4">Lv5. 專家 (25x25) - 6命</option>
+                <option value="5">Lv6. 大師 (36x36) - 8命</option>
+                <option value="6">Lv7. 宗師 (49x49) - 10命</option>
+                <option value="7">Lv8. 傳說 (64x64) - 15命</option>
             </select>
-            <div class="status-info">❤️ 復活機會: <span id="lives-display">3</span></div>
+            <div class="status-info">❤️ 復活: <span id="lives-display">5</span></div>
         </div>
 
         <div class="header">
-            <div id="mines-count" class="counter">010</div>
+            <div id="mines-count" class="counter">000</div>
             <div id="face-btn" class="face-btn">🙂</div>
             <div id="timer" class="counter">000</div>
         </div>
 
-        <div id="game-board"></div>
+        <div class="game-scroll-area">
+            <div id="game-board"></div>
+        </div>
     </div>
 
     <div id="quiz-modal">
         <div class="quiz-box">
             <div class="quiz-header">💥 觸發地雷！</div>
-            <div class="quiz-sub">回答正確單字意思即可拆彈復活！</div>
-            
-            <div id="q-word" class="quiz-word">Vocabulary</div>
+            <div class="quiz-sub">回答單字以拆彈復活</div>
+            <div id="q-word" class="quiz-word">Word</div>
             <div id="q-options" class="quiz-options"></div>
         </div>
     </div>
 
     <script>
-        // --- 📚 高中單字庫 (Level 3-5 核心字彙) ---
+        // --- 📚 高中核心單字庫 ---
         const vocabList = [
-            // Level 3-4 (核心)
-            { w: "Accommodate", m: "容納；提供住宿" },
-            { w: "Acquire", m: "獲得；習得" },
-            { w: "Aggressive", m: "侵略性的；積極的" },
-            { w: "Ambiguous", m: "模稜兩可的" },
-            { w: "Analyze", m: "分析" },
-            { w: "Annual", m: "年度的" },
-            { w: "Anxiety", m: "焦慮" },
-            { w: "Appreciate", m: "感激；欣賞" },
-            { w: "Artificial", m: "人造的" },
-            { w: "Associate", m: "聯想；結交" },
-            { w: "Candidate", m: "候選人" },
-            { w: "Capacity", m: "容量；能力" },
-            { w: "Characteristic", m: "特徵" },
-            { w: "Circumstance", m: "情況；環境" },
-            { w: "Collapse", m: "倒塌；崩潰" },
-            { w: "Commitment", m: "承諾；投入" },
-            { w: "Competitive", m: "有競爭力的" },
-            { w: "Consequence", m: "後果" },
-            { w: "Conservative", m: "保守的" },
-            { w: "Convention", m: "大會；習俗" },
-            { w: "Demonstrate", m: "示範；證明" },
-            { w: "Disaster", m: "災難" },
-            { w: "Distinguish", m: "區別；分辨" },
-            { w: "Dramatic", m: "戲劇性的；急劇的" },
-            { w: "Economical", m: "實惠的；節省的" },
-            { w: "Efficient", m: "有效率的" },
-            { w: "Eliminate", m: "消除；淘汰" },
-            { w: "Emphasis", m: "強調" },
-            { w: "Encounter", m: "遭遇；邂逅" },
-            { w: "Establish", m: "建立" },
-            { w: "Estimate", m: "估計" },
-            { w: "Evaluate", m: "評估" },
-            { w: "Exaggerate", m: "誇張" },
-            { w: "Exhausted", m: "筋疲力盡的" },
-            { w: "Financial", m: "財務的" },
-            { w: "Fundamental", m: "基礎的" },
-            { w: "Guarantee", m: "保證" },
-            { w: "Hesitate", m: "猶豫" },
-            { w: "Identify", m: "識別；認出" },
-            { w: "Illustrate", m: "說明；繪圖" },
-            { w: "Immediate", m: "立即的" },
-            { w: "Innocent", m: "無辜的；天真的" },
-            { w: "Inspire", m: "鼓舞；激發靈感" },
-            { w: "Interaction", m: "互動" },
-            { w: "Investigate", m: "調查" },
-            { w: "Involve", m: "牽涉；包含" },
-            
-            // Level 5-6 (進階)
-            { w: "Accumulate", m: "累積" },
-            { w: "Advocate", m: "提倡；主張" },
-            { w: "Breach", m: "違法；違反" },
-            { w: "Coincide", m: "巧合；同時發生" },
-            { w: "Collaboration", m: "合作" },
-            { w: "Comprehensive", m: "全面的" },
-            { w: "Contradict", m: "反駁；與...矛盾" },
-            { w: "Criteria", m: "標準 (複數)" },
-            { w: "Curriculum", m: "課程" },
-            { w: "Deprive", m: "剝奪" },
-            { w: "Deteriorate", m: "惡化" },
-            { w: "Dilemma", m: "進退兩難的困境" },
-            { w: "Discrimination", m: "歧視" },
-            { w: "Domestic", m: "家庭的；國內的" },
-            { w: "Eligible", m: "有資格的" },
-            { w: "Explicit", m: "明確的；詳盡的" },
-            { w: "Fluctuate", m: "波動" },
-            { w: "Hierarchy", m: "階級制度" },
-            { w: "Hostile", m: "有敵意的" },
-            { w: "Hypothesis", m: "假說" },
-            { w: "Implement", m: "實施" },
-            { w: "Indifferent", m: "冷漠的" },
-            { w: "Inevitable", m: "不可避免的" },
-            { w: "Infrastructure", m: "基礎建設" },
-            { w: "Inherit", m: "繼承" },
-            { w: "Initiative", m: "主動權；倡議" },
-            { w: "Innovation", m: "創新" },
-            { w: "Intervene", m: "介入；干涉" },
-            { w: "Intuition", m: "直覺" },
-            { w: "Legislation", m: "法規；立法" },
-            { w: "Mechanism", m: "機制" },
-            { w: "Negotiate", m: "談判" },
-            { w: "Notorious", m: "惡名昭彰的" },
-            { w: "Obstacle", m: "障礙" },
-            { w: "Optimistic", m: "樂觀的" },
-            { w: "Pessimistic", m: "悲觀的" },
-            { w: "Phenomenon", m: "現象" },
-            { w: "Potential", m: "潛在的" },
-            { w: "Preliminary", m: "初步的" },
-            { w: "Privilege", m: "特權" },
-            { w: "Prosperous", m: "繁榮的" },
-            { w: "Psychological", m: "心理的" },
-            { w: "Reluctant", m: "不情願的" },
-            { w: "Sophisticated", m: "精密的；世故的" },
-            { w: "Spectacular", m: "壯觀的" },
-            { w: "Spontaneous", m: "自發的" },
-            { w: "Suspicious", m: "懷疑的" },
-            { w: "Tolerate", m: "忍受" },
-            { w: "Transformation", m: "轉變" },
-            { w: "Unanimous", m: "全體一致的" },
-            { w: "Vulnerable", m: "易受傷的；脆弱的" },
-            { w: "Welfare", m: "福利" }
+            { w: "Accommodate", m: "容納；提供住宿" }, { w: "Acquire", m: "獲得；習得" },
+            { w: "Aggressive", m: "侵略性的；積極的" }, { w: "Ambiguous", m: "模稜兩可的" },
+            { w: "Analyze", m: "分析" }, { w: "Annual", m: "年度的" },
+            { w: "Anxiety", m: "焦慮" }, { w: "Appreciate", m: "感激；欣賞" },
+            { w: "Artificial", m: "人造的" }, { w: "Associate", m: "聯想；結交" },
+            { w: "Candidate", m: "候選人" }, { w: "Capacity", m: "容量；能力" },
+            { w: "Characteristic", m: "特徵" }, { w: "Circumstance", m: "情況；環境" },
+            { w: "Collapse", m: "倒塌；崩潰" }, { w: "Commitment", m: "承諾；投入" },
+            { w: "Competitive", m: "有競爭力的" }, { w: "Consequence", m: "後果" },
+            { w: "Conservative", m: "保守的" }, { w: "Convention", m: "大會；習俗" },
+            { w: "Demonstrate", m: "示範；證明" }, { w: "Disaster", m: "災難" },
+            { w: "Distinguish", m: "區別；分辨" }, { w: "Dramatic", m: "戲劇性的" },
+            { w: "Economical", m: "實惠的" }, { w: "Efficient", m: "有效率的" },
+            { w: "Eliminate", m: "消除；淘汰" }, { w: "Emphasis", m: "強調" },
+            { w: "Encounter", m: "遭遇" }, { w: "Establish", m: "建立" },
+            { w: "Estimate", m: "估計" }, { w: "Evaluate", m: "評估" },
+            { w: "Exaggerate", m: "誇張" }, { w: "Exhausted", m: "筋疲力盡的" },
+            { w: "Financial", m: "財務的" }, { w: "Fundamental", m: "基礎的" },
+            { w: "Guarantee", m: "保證" }, { w: "Hesitate", m: "猶豫" },
+            { w: "Identify", m: "識別" }, { w: "Illustrate", m: "說明" },
+            { w: "Immediate", m: "立即的" }, { w: "Innocent", m: "無辜的" },
+            { w: "Inspire", m: "鼓舞" }, { w: "Interaction", m: "互動" },
+            { w: "Investigate", m: "調查" }, { w: "Involve", m: "牽涉" },
+            { w: "Accumulate", m: "累積" }, { w: "Advocate", m: "提倡" },
+            { w: "Breach", m: "違法" }, { w: "Coincide", m: "巧合" },
+            { w: "Collaboration", m: "合作" }, { w: "Comprehensive", m: "全面的" },
+            { w: "Contradict", m: "反駁" }, { w: "Criteria", m: "標準" },
+            { w: "Curriculum", m: "課程" }, { w: "Deprive", m: "剝奪" },
+            { w: "Deteriorate", m: "惡化" }, { w: "Dilemma", m: "進退兩難" },
+            { w: "Discrimination", m: "歧視" }, { w: "Domestic", m: "家庭的" },
+            { w: "Eligible", m: "有資格的" }, { w: "Explicit", m: "明確的" },
+            { w: "Fluctuate", m: "波動" }, { w: "Hierarchy", m: "階級制度" },
+            { w: "Hostile", m: "有敵意的" }, { w: "Hypothesis", m: "假說" },
+            { w: "Implement", m: "實施" }, { w: "Indifferent", m: "冷漠的" },
+            { w: "Inevitable", m: "不可避免的" }, { w: "Infrastructure", m: "基礎建設" },
+            { w: "Inherit", m: "繼承" }, { w: "Initiative", m: "主動權" },
+            { w: "Innovation", m: "創新" }, { w: "Intervene", m: "介入" },
+            { w: "Intuition", m: "直覺" }, { w: "Legislation", m: "法規" },
+            { w: "Mechanism", m: "機制" }, { w: "Negotiate", m: "談判" },
+            { w: "Notorious", m: "惡名昭彰的" }, { w: "Obstacle", m: "障礙" },
+            { w: "Optimistic", m: "樂觀的" }, { w: "Pessimistic", m: "悲觀的" },
+            { w: "Phenomenon", m: "現象" }, { w: "Potential", m: "潛在的" },
+            { w: "Preliminary", m: "初步的" }, { w: "Privilege", m: "特權" },
+            { w: "Prosperous", m: "繁榮的" }, { w: "Psychological", m: "心理的" },
+            { w: "Reluctant", m: "不情願的" }, { w: "Sophisticated", m: "精密的" },
+            { w: "Spectacular", m: "壯觀的" }, { w: "Spontaneous", m: "自發的" },
+            { w: "Suspicious", m: "懷疑的" }, { w: "Tolerate", m: "忍受" },
+            { w: "Transformation", m: "轉變" }, { w: "Unanimous", m: "全體一致的" },
+            { w: "Vulnerable", m: "脆弱的" }, { w: "Welfare", m: "福利" }
         ];
 
-        // --- 遊戲參數與邏輯 ---
+        // --- 遊戲難度設定 (含新增級距) ---
         const difficulties = [
-            { name: "Entry", rows: 8, cols: 8, mines: 8, lives: 99 }, // 練習: 無限
-            { name: "Medium", rows: 9, cols: 9, mines: 10, lives: 3 }, // 中級: 3次
-            { name: "Hard", rows: 16, cols: 16, mines: 40, lives: 4 }, // 高級: 4次
-            { name: "Hell", rows: 16, cols: 30, mines: 99, lives: 5 }  // 地獄: 5次
+            { name: "Entry", rows: 8, cols: 8, mines: 8, lives: 99 },   // Lv1
+            { name: "Basic", rows: 9, cols: 9, mines: 10, lives: 3 },   // Lv2
+            { name: "Medium", rows: 16, cols: 16, mines: 40, lives: 4 },// Lv3
+            { name: "Hard", rows: 20, cols: 20, mines: 65, lives: 5 },  // Lv4 (密度~16%)
+            { name: "Expert", rows: 25, cols: 25, mines: 105, lives: 6 },// Lv5 (密度~17%)
+            { name: "Master", rows: 36, cols: 36, mines: 230, lives: 8 },// Lv6 (密度~18%)
+            { name: "Grand", rows: 49, cols: 49, mines: 450, lives: 10 },// Lv7 (密度~19%)
+            { name: "Legend", rows: 64, cols: 64, mines: 820, lives: 15 }// Lv8 (密度~20%) - 超大挑戰
         ];
 
         let config;
@@ -342,7 +292,6 @@
         let currentLives = 0;
         let currentMineR = -1, currentMineC = -1;
 
-        // DOM 元素
         const boardEl = document.getElementById('game-board');
         const minesEl = document.getElementById('mines-count');
         const timerEl = document.getElementById('timer');
@@ -365,7 +314,6 @@
             timerEl.innerText = "000";
             faceBtn.innerText = "🙂";
             
-            // 更新生命值顯示
             if(config.lives > 50) {
                 livesDisplay.innerText = "∞";
                 livesDisplay.style.color = "green";
@@ -374,7 +322,6 @@
                 livesDisplay.style.color = "#000080";
             }
             
-            // 建立陣列
             board = Array(config.rows).fill().map(() => Array(config.cols).fill(0));
             revealed = Array(config.rows).fill().map(() => Array(config.cols).fill(false));
             flagged = Array(config.rows).fill().map(() => Array(config.cols).fill(false));
@@ -383,13 +330,20 @@
         }
 
         function renderBoard() {
-            boardEl.style.gridTemplateColumns = `repeat(${config.cols}, auto)`;
+            // 設定 Grid 欄位數與寬度 (固定20px)
+            boardEl.style.gridTemplateColumns = `repeat(${config.cols}, 22px)`; 
             boardEl.innerHTML = '';
+            
+            // 效能優化：使用 DocumentFragment 一次插入
+            const fragment = document.createDocumentFragment();
+
             for (let r = 0; r < config.rows; r++) {
                 for (let c = 0; c < config.cols; c++) {
                     const cell = document.createElement('div');
-                    cell.classList.add('cell');
-                    cell.dataset.r = r; cell.dataset.c = c;
+                    cell.className = 'cell';
+                    // 為了效能，對於大圖改用 ID 或直接參考，這裡維持 data 屬性但簡化邏輯
+                    cell.dataset.r = r; 
+                    cell.dataset.c = c;
                     
                     cell.addEventListener('mousedown', (e) => handleInput(e, r, c));
                     cell.addEventListener('contextmenu', (e) => { 
@@ -397,16 +351,17 @@
                         handleRightClick(r, c); 
                     });
                     
-                    // 手機長按支援 (模擬右鍵)
+                    // 觸控支援
                     let longPressTimer;
                     cell.addEventListener('touchstart', () => {
                         longPressTimer = setTimeout(() => handleRightClick(r, c), 500);
                     });
                     cell.addEventListener('touchend', () => clearTimeout(longPressTimer));
 
-                    boardEl.appendChild(cell);
+                    fragment.appendChild(cell);
                 }
             }
+            boardEl.appendChild(fragment);
         }
 
         function handleInput(e, r, c) {
@@ -476,29 +431,40 @@
         }
 
         function revealCell(r, c) {
-            if (r<0 || r>=config.rows || c<0 || c>=config.cols || revealed[r][c] || flagged[r][c]) return;
-            revealed[r][c] = true;
-            const cell = getCellEl(r, c);
-            const val = board[r][c];
-            cell.classList.add('revealed');
-            if (val > 0) {
-                cell.innerText = val; cell.classList.add('c' + val);
-            } else if (val === 0) {
-                for (let i = r-1; i <= r+1; i++)
-                    for (let j = c-1; j <= c+1; j++) revealCell(i, j);
+            // 使用堆疊 (Stack) 取代遞迴，防止 64x64 大圖導致堆疊溢位 (Stack Overflow)
+            const stack = [[r, c]];
+            
+            while(stack.length > 0) {
+                const [currR, currC] = stack.pop();
+                
+                if (currR < 0 || currR >= config.rows || currC < 0 || currC >= config.cols) continue;
+                if (revealed[currR][currC] || flagged[currR][currC]) continue;
+
+                revealed[currR][currC] = true;
+                const cell = getCellEl(currR, currC);
+                const val = board[currR][currC];
+                
+                cell.classList.add('revealed');
+                
+                if (val > 0) {
+                    cell.innerText = val; 
+                    cell.classList.add('c' + val);
+                } else if (val === 0) {
+                    // 如果是0，將周圍加入堆疊
+                    for (let i = currR-1; i <= currR+1; i++)
+                        for (let j = currC-1; j <= currC+1; j++)
+                             stack.push([i, j]);
+                }
             }
         }
 
-        // --- 單字測驗邏輯 ---
         function triggerQuiz(r, c) {
-            currentMineR = r;
-            currentMineC = c;
+            currentMineR = r; currentMineC = c;
             
             const qIndex = Math.floor(Math.random() * vocabList.length);
             const correctVocab = vocabList[qIndex];
             
-            qWord.innerText = correctVocab.w; 
-            qOptions.innerHTML = '';
+            qWord.innerText = correctVocab.w; qOptions.innerHTML = '';
 
             let options = [correctVocab.m];
             while (options.length < 3) {
@@ -513,22 +479,18 @@
                 btn.onclick = () => checkAnswer(optText, correctVocab.m);
                 qOptions.appendChild(btn);
             });
-
             quizModal.style.display = "flex";
         }
 
         function checkAnswer(userAns, correctAns) {
             quizModal.style.display = "none";
-
             if (userAns === correctAns) {
                 currentLives--;
-                
-                if(config.lives < 50) { // 只有非練習模式才扣血並檢查
+                if(config.lives < 50) {
                     livesDisplay.innerText = currentLives;
                     if(currentLives === 0) livesDisplay.style.color = "red";
                 }
-
-                alert("✅ 答對了！危機解除！\n(剩餘復活次數: " + (config.lives > 50 ? "∞" : currentLives) + ")");
+                alert("✅ 答對！拆彈成功！\n(剩餘次數: " + (config.lives>50?"∞":currentLives) + ")");
                 
                 if (!flagged[currentMineR][currentMineC]) {
                     flagged[currentMineR][currentMineC] = true;
@@ -540,7 +502,7 @@
                 }
                 checkWin();
             } else {
-                alert("❌ 答錯了！\n正確答案是: " + correctAns);
+                alert("❌ 錯誤！答案是: " + correctAns);
                 triggerGameOver(false, currentMineR, currentMineC);
             }
         }
@@ -550,7 +512,7 @@
             clearInterval(timerInterval);
             if (win) {
                 faceBtn.innerText = "😎";
-                setTimeout(() => alert("🎉 恭喜過關！\n單字大師就是你！耗時 " + timeElapsed + " 秒"), 100);
+                setTimeout(() => alert("🎉 恭喜通關！\n耗時: " + timeElapsed + " 秒"), 100);
             } else {
                 faceBtn.innerText = "😵";
                 if (hitR !== undefined) {
@@ -558,6 +520,7 @@
                     hitCell.classList.add('mine');
                     hitCell.style.backgroundColor = "red";
                 }
+                // 顯示所有地雷，大圖時使用 setTimeout 分批顯示避免卡頓 (但這裡為了簡單直接跑)
                 for (let r = 0; r < config.rows; r++) {
                     for (let c = 0; c < config.cols; c++) {
                         if (board[r][c] === -1 && !flagged[r][c]) {
@@ -573,11 +536,12 @@
             }
         }
 
-        function getCellEl(r, c) { return document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`); }
+        function getCellEl(r, c) { return boardEl.children[r * config.cols + c]; }
+        
         function startTimer() {
             timerInterval = setInterval(() => {
                 timeElapsed++;
-                if (timeElapsed > 999) timeElapsed = 999;
+                if (timeElapsed > 9999) timeElapsed = 9999;
                 timerEl.innerText = timeElapsed.toString().padStart(3, '0');
             }, 1000);
         }
@@ -593,7 +557,11 @@
 
         faceBtn.addEventListener('click', initGame);
         diffSelect.addEventListener('change', initGame);
-        initGame(); // 啟動遊戲
+        
+        // 防止右鍵選單干擾
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        
+        initGame();
 
     </script>
 </body>
