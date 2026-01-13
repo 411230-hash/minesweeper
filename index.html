@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極限單字踩地雷 (Lv1-Lv8)</title>
+    <title>單字踩地雷 (無盡排行版)</title>
     <style>
         /* --- CSS: 風格與佈局 --- */
         body {
@@ -13,9 +13,9 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh; /* 固定高度，讓內部可以捲動 */
+            height: 100vh;
             margin: 0;
-            overflow: hidden; /* 防止整個網頁捲動 */
+            overflow: hidden;
             user-select: none;
         }
 
@@ -26,12 +26,11 @@
             border-bottom-color: #7b7b7b;
             padding: 8px;
             box-shadow: 4px 4px 12px rgba(0,0,0,0.5);
-            
-            /* 讓視窗適應螢幕，並允許內部捲動 */
             max-width: 95vw;
             max-height: 95vh;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
 
         /* 頂部控制區 */
@@ -47,18 +46,18 @@
             border-bottom-color: white;
             flex-wrap: wrap;
             gap: 5px;
-            flex-shrink: 0; /* 防止被壓縮 */
+            flex-shrink: 0;
         }
         
         select { font-size: 14px; padding: 3px; }
 
         .status-info {
-            font-size: 15px;
-            font-weight: bold;
-            color: #000080;
-            background: #fff;
-            padding: 2px 6px;
-            border: 1px inset #ccc;
+            font-size: 14px; font-weight: bold; color: #000080;
+            background: #fff; padding: 2px 6px; border: 1px inset #ccc;
+        }
+        
+        .player-name-display {
+            font-size: 14px; color: #333; margin-right: 5px; font-weight: bold;
         }
 
         /* 儀表板 */
@@ -76,60 +75,38 @@
         }
 
         .counter {
-            background: black;
-            color: red;
+            background: black; color: red;
             font-family: "Courier New", monospace;
-            font-size: 26px;
-            font-weight: bold;
-            padding: 0 5px;
-            width: 60px; /* 加寬一點以顯示大數字 */
-            text-align: right;
-            border: 2px solid #7b7b7b;
-            border-right-color: white;
-            border-bottom-color: white;
+            font-size: 26px; font-weight: bold;
+            padding: 0 5px; width: 60px; text-align: right;
+            border: 2px solid #7b7b7b; border-right-color: white; border-bottom-color: white;
         }
 
         .face-btn {
             width: 40px; height: 40px; font-size: 24px;
             background-color: #bdbdbd;
-            border: 2px solid white;
-            border-right-color: #7b7b7b;
-            border-bottom-color: #7b7b7b;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
+            border: 2px solid white; border-right-color: #7b7b7b; border-bottom-color: #7b7b7b;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
         .face-btn:active { border-style: inset; padding-top: 2px; padding-left: 2px; }
 
-        /* 遊戲區域容器 (負責捲動) */
+        /* 遊戲區域 */
         .game-scroll-area {
-            overflow: auto; /* 自動出現捲軸 */
-            border: 4px solid #7b7b7b;
-            border-right-color: white;
-            border-bottom-color: white;
-            background: #999;
-            flex-grow: 1; /* 佔滿剩餘空間 */
+            overflow: auto;
+            border: 4px solid #7b7b7b; border-right-color: white; border-bottom-color: white;
+            background: #999; flex-grow: 1;
         }
 
-        #game-board {
-            display: grid;
-            margin: 0; 
-            /* 讓格子緊密排列 */
-        }
+        #game-board { display: grid; margin: 0; }
 
         .cell {
-            width: 20px; height: 20px; /* 稍微縮小格子以容納更多 */
+            width: 22px; height: 22px;
             background-color: #c0c0c0;
-            border: 1px solid white; /* 邊框變細 */
-            border-right-color: #7b7b7b;
-            border-bottom-color: #7b7b7b;
+            border: 1px solid white; border-right-color: #7b7b7b; border-bottom-color: #7b7b7b;
             display: flex; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 12px; cursor: default;
+            font-weight: 900; font-size: 14px; cursor: default;
         }
-        .cell.revealed {
-            border: 1px solid #999;
-            background-color: #dcdcdc;
-            width: 20px; height: 20px;
-        }
+        .cell.revealed { border: 1px solid #999; background-color: #dcdcdc; width: 22px; height: 22px; }
         .cell.mine { background-color: #ff4d4d; border: 1px solid #7b7b7b; }
         .cell.flag { color: red; }
         
@@ -137,66 +114,89 @@
         .c4 { color: darkblue; } .c5 { color: darkred; } .c6 { color: teal; }
         .c7 { color: black; } .c8 { color: gray; }
 
-        /* --- 測驗視窗 (Modal) --- */
-        #quiz-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
-            z-index: 999;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(2px);
+        /* --- 彈跳視窗共用樣式 --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(3px);
         }
         
-        .quiz-box {
-            background: #f0f0f0;
-            width: 90%;
-            max-width: 400px;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            border: 4px solid #0056b3;
+        .modal-box {
+            background: #f0f0f0; width: 90%; max-width: 400px;
+            padding: 20px; border-radius: 8px; text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 4px solid #0056b3;
+        }
+        
+        /* 暱稱輸入 */
+        .input-group { margin: 20px 0; }
+        .input-group input {
+            padding: 10px; font-size: 18px; width: 80%; text-align: center;
+            border: 2px solid #7b7b7b; border-radius: 4px;
+        }
+        .btn-start {
+            padding: 10px 20px; font-size: 18px; background: #007bff; color: white;
+            border: none; border-radius: 5px; cursor: pointer;
+        }
+        .btn-start:hover { background: #0056b3; }
+
+        /* 排行榜 */
+        .leaderboard-table {
+            width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;
+        }
+        .leaderboard-table th { background: #007bff; color: white; padding: 5px; }
+        .leaderboard-table td { border-bottom: 1px solid #ccc; padding: 5px; color: #333; }
+        .current-run { background-color: #ffffcc; font-weight: bold; }
+        
+        .btn-restart {
+            margin-top: 15px; padding: 8px 16px; background: #28a745; color: white;
+            border: none; border-radius: 4px; cursor: pointer; font-size: 16px;
         }
 
-        .quiz-header { color: #d9534f; font-weight: bold; font-size: 22px; margin-bottom: 5px; }
-        .quiz-sub { font-size: 14px; color: #555; margin-bottom: 15px; }
+        /* 測驗視窗 */
         .quiz-word { 
             font-size: 32px; color: #222; font-weight: 800; 
-            margin: 20px 0; padding: 10px;
-            background: #fff; border: 2px dashed #ccc; border-radius: 5px;
+            margin: 20px 0; padding: 10px; background: #fff; 
+            border: 2px dashed #ccc; border-radius: 5px;
         }
-        
-        .quiz-options { display: flex; flex-direction: column; gap: 10px; }
         .quiz-options button {
-            padding: 14px; background: #fff;
-            border: 2px solid #ddd; border-radius: 6px;
-            cursor: pointer; font-size: 17px; font-weight: 500;
-            transition: all 0.2s;
+            width: 100%; padding: 12px; margin-bottom: 8px;
+            background: #fff; border: 2px solid #ddd; border-radius: 6px;
+            cursor: pointer; font-size: 16px; text-align: left;
         }
-        .quiz-options button:hover { 
-            background: #e9ecef; border-color: #0056b3; color: #0056b3;
-            transform: translateX(5px);
-        }
+        .quiz-options button:hover { background: #e9ecef; border-color: #0056b3; color: #0056b3; }
 
     </style>
 </head>
 <body>
 
+    <div id="start-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2>🎒 單字特訓班</h2>
+            <p>請輸入您的暱稱開始挑戰</p>
+            <div class="input-group">
+                <input type="text" id="player-nickname" placeholder="例如: 英文小天才" maxlength="10">
+            </div>
+            <button class="btn-start" onclick="startGameSession()">開始遊玩</button>
+        </div>
+    </div>
+
     <div class="window">
         <div class="controls">
-            <select id="difficulty-select">
-                <option value="0">Lv1. 入門 (8x8) - 練習用</option>
-                <option value="1">Lv2. 初級 (9x9) - 3命</option>
-                <option value="2">Lv3. 中級 (16x16) - 4命</option>
-                <option value="3" selected>Lv4. 高級 (20x20) - 5命</option>
-                <option value="4">Lv5. 專家 (25x25) - 6命</option>
-                <option value="5">Lv6. 大師 (36x36) - 8命</option>
-                <option value="6">Lv7. 宗師 (49x49) - 10命</option>
-                <option value="7">Lv8. 傳說 (64x64) - 15命</option>
-            </select>
-            <div class="status-info">❤️ 復活: <span id="lives-display">5</span></div>
+            <div>
+                <span class="player-name-display" id="display-name">玩家</span>
+                <select id="difficulty-select">
+                    <option value="endless" selected>🏆 無盡模式 (20x20) - 25命</option>
+                    <option value="0">Lv1. 入門 (8x8) - 練習</option>
+                    <option value="1">Lv2. 初級 (9x9) - 3命</option>
+                    <option value="2">Lv3. 中級 (16x16) - 4命</option>
+                    <option value="3">Lv4. 高級 (20x20) - 5命</option>
+                    <option value="4">Lv5. 專家 (25x25) - 6命</option>
+                    <option value="6">Lv7. 宗師 (49x49) - 10命</option>
+                </select>
+            </div>
+            <div class="status-info">❤️ 復活: <span id="lives-display">25</span> | 🚩 關卡: <span id="level-display">1</span></div>
+            <button style="font-size:12px; cursor:pointer;" onclick="showLeaderboard()">🏆 排行榜</button>
         </div>
 
         <div class="header">
@@ -210,80 +210,85 @@
         </div>
     </div>
 
-    <div id="quiz-modal">
-        <div class="quiz-box">
-            <div class="quiz-header">💥 觸發地雷！</div>
-            <div class="quiz-sub">回答單字以拆彈復活</div>
+    <div id="quiz-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h3 style="color:#d9534f; margin:0;">💥 觸發地雷！</h3>
+            <p style="color:#666; font-size:14px;">答對即可復活</p>
             <div id="q-word" class="quiz-word">Word</div>
             <div id="q-options" class="quiz-options"></div>
         </div>
     </div>
 
+    <div id="leaderboard-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2 style="color:#007bff;">🏆 本地英雄榜 (無盡模式)</h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>名次</th>
+                        <th>玩家</th>
+                        <th>關卡數</th>
+                        <th>時間</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    </tbody>
+            </table>
+            <button class="btn-restart" onclick="closeLeaderboard()">關閉</button>
+            <div style="margin-top:10px; font-size:12px; color:#888;">*紀錄僅存於此瀏覽器</div>
+        </div>
+    </div>
+
     <script>
-        // --- 📚 高中核心單字庫 ---
+        // --- 📚 高中單字庫 ---
         const vocabList = [
             { w: "Accommodate", m: "容納；提供住宿" }, { w: "Acquire", m: "獲得；習得" },
-            { w: "Aggressive", m: "侵略性的；積極的" }, { w: "Ambiguous", m: "模稜兩可的" },
+            { w: "Aggressive", m: "侵略性的" }, { w: "Ambiguous", m: "模稜兩可的" },
             { w: "Analyze", m: "分析" }, { w: "Annual", m: "年度的" },
             { w: "Anxiety", m: "焦慮" }, { w: "Appreciate", m: "感激；欣賞" },
-            { w: "Artificial", m: "人造的" }, { w: "Associate", m: "聯想；結交" },
+            { w: "Artificial", m: "人造的" }, { w: "Associate", m: "聯想" },
             { w: "Candidate", m: "候選人" }, { w: "Capacity", m: "容量；能力" },
-            { w: "Characteristic", m: "特徵" }, { w: "Circumstance", m: "情況；環境" },
-            { w: "Collapse", m: "倒塌；崩潰" }, { w: "Commitment", m: "承諾；投入" },
+            { w: "Collapse", m: "倒塌" }, { w: "Commitment", m: "承諾" },
             { w: "Competitive", m: "有競爭力的" }, { w: "Consequence", m: "後果" },
-            { w: "Conservative", m: "保守的" }, { w: "Convention", m: "大會；習俗" },
-            { w: "Demonstrate", m: "示範；證明" }, { w: "Disaster", m: "災難" },
-            { w: "Distinguish", m: "區別；分辨" }, { w: "Dramatic", m: "戲劇性的" },
-            { w: "Economical", m: "實惠的" }, { w: "Efficient", m: "有效率的" },
-            { w: "Eliminate", m: "消除；淘汰" }, { w: "Emphasis", m: "強調" },
+            { w: "Conservative", m: "保守的" }, { w: "Demonstrate", m: "示範" },
+            { w: "Disaster", m: "災難" }, { w: "Distinguish", m: "區別" },
+            { w: "Efficient", m: "有效率的" }, { w: "Eliminate", m: "消除" },
             { w: "Encounter", m: "遭遇" }, { w: "Establish", m: "建立" },
             { w: "Estimate", m: "估計" }, { w: "Evaluate", m: "評估" },
             { w: "Exaggerate", m: "誇張" }, { w: "Exhausted", m: "筋疲力盡的" },
-            { w: "Financial", m: "財務的" }, { w: "Fundamental", m: "基礎的" },
-            { w: "Guarantee", m: "保證" }, { w: "Hesitate", m: "猶豫" },
-            { w: "Identify", m: "識別" }, { w: "Illustrate", m: "說明" },
+            { w: "Financial", m: "財務的" }, { w: "Guarantee", m: "保證" },
+            { w: "Hesitate", m: "猶豫" }, { w: "Identify", m: "識別" },
             { w: "Immediate", m: "立即的" }, { w: "Innocent", m: "無辜的" },
-            { w: "Inspire", m: "鼓舞" }, { w: "Interaction", m: "互動" },
-            { w: "Investigate", m: "調查" }, { w: "Involve", m: "牽涉" },
-            { w: "Accumulate", m: "累積" }, { w: "Advocate", m: "提倡" },
-            { w: "Breach", m: "違法" }, { w: "Coincide", m: "巧合" },
+            { w: "Inspire", m: "鼓舞" }, { w: "Investigate", m: "調查" },
+            { w: "Involve", m: "牽涉" }, { w: "Breach", m: "違法" },
             { w: "Collaboration", m: "合作" }, { w: "Comprehensive", m: "全面的" },
             { w: "Contradict", m: "反駁" }, { w: "Criteria", m: "標準" },
-            { w: "Curriculum", m: "課程" }, { w: "Deprive", m: "剝奪" },
-            { w: "Deteriorate", m: "惡化" }, { w: "Dilemma", m: "進退兩難" },
-            { w: "Discrimination", m: "歧視" }, { w: "Domestic", m: "家庭的" },
+            { w: "Dilemma", m: "進退兩難" }, { w: "Discrimination", m: "歧視" },
             { w: "Eligible", m: "有資格的" }, { w: "Explicit", m: "明確的" },
             { w: "Fluctuate", m: "波動" }, { w: "Hierarchy", m: "階級制度" },
-            { w: "Hostile", m: "有敵意的" }, { w: "Hypothesis", m: "假說" },
-            { w: "Implement", m: "實施" }, { w: "Indifferent", m: "冷漠的" },
+            { w: "Hypothesis", m: "假說" }, { w: "Implement", m: "實施" },
             { w: "Inevitable", m: "不可避免的" }, { w: "Infrastructure", m: "基礎建設" },
-            { w: "Inherit", m: "繼承" }, { w: "Initiative", m: "主動權" },
-            { w: "Innovation", m: "創新" }, { w: "Intervene", m: "介入" },
-            { w: "Intuition", m: "直覺" }, { w: "Legislation", m: "法規" },
+            { w: "Initiative", m: "主動權" }, { w: "Innovation", m: "創新" },
+            { w: "Intervene", m: "介入" }, { w: "Legislation", m: "法規" },
             { w: "Mechanism", m: "機制" }, { w: "Negotiate", m: "談判" },
-            { w: "Notorious", m: "惡名昭彰的" }, { w: "Obstacle", m: "障礙" },
-            { w: "Optimistic", m: "樂觀的" }, { w: "Pessimistic", m: "悲觀的" },
+            { w: "Obstacle", m: "障礙" }, { w: "Optimistic", m: "樂觀的" },
             { w: "Phenomenon", m: "現象" }, { w: "Potential", m: "潛在的" },
-            { w: "Preliminary", m: "初步的" }, { w: "Privilege", m: "特權" },
-            { w: "Prosperous", m: "繁榮的" }, { w: "Psychological", m: "心理的" },
+            { w: "Privilege", m: "特權" }, { w: "Prosperous", m: "繁榮的" },
             { w: "Reluctant", m: "不情願的" }, { w: "Sophisticated", m: "精密的" },
-            { w: "Spectacular", m: "壯觀的" }, { w: "Spontaneous", m: "自發的" },
-            { w: "Suspicious", m: "懷疑的" }, { w: "Tolerate", m: "忍受" },
-            { w: "Transformation", m: "轉變" }, { w: "Unanimous", m: "全體一致的" },
-            { w: "Vulnerable", m: "脆弱的" }, { w: "Welfare", m: "福利" }
+            { w: "Spontaneous", m: "自發的" }, { w: "Suspicious", m: "懷疑的" },
+            { w: "Transformation", m: "轉變" }, { w: "Vulnerable", m: "脆弱的" }
         ];
 
-        // --- 遊戲難度設定 (含新增級距) ---
-        const difficulties = [
-            { name: "Entry", rows: 8, cols: 8, mines: 8, lives: 99 },   // Lv1
-            { name: "Basic", rows: 9, cols: 9, mines: 10, lives: 3 },   // Lv2
-            { name: "Medium", rows: 16, cols: 16, mines: 40, lives: 4 },// Lv3
-            { name: "Hard", rows: 20, cols: 20, mines: 65, lives: 5 },  // Lv4 (密度~16%)
-            { name: "Expert", rows: 25, cols: 25, mines: 105, lives: 6 },// Lv5 (密度~17%)
-            { name: "Master", rows: 36, cols: 36, mines: 230, lives: 8 },// Lv6 (密度~18%)
-            { name: "Grand", rows: 49, cols: 49, mines: 450, lives: 10 },// Lv7 (密度~19%)
-            { name: "Legend", rows: 64, cols: 64, mines: 820, lives: 15 }// Lv8 (密度~20%) - 超大挑戰
-        ];
+        // --- 遊戲設定 ---
+        const difficulties = {
+            "endless": { name: "Endless", rows: 20, cols: 20, mines: 65, lives: 25 }, // 無盡模式
+            "0": { name: "Entry", rows: 8, cols: 8, mines: 8, lives: 99 },
+            "1": { name: "Basic", rows: 9, cols: 9, mines: 10, lives: 3 },
+            "2": { name: "Medium", rows: 16, cols: 16, mines: 40, lives: 4 },
+            "3": { name: "Hard", rows: 20, cols: 20, mines: 65, lives: 5 },
+            "4": { name: "Expert", rows: 25, cols: 25, mines: 105, lives: 6 },
+            "6": { name: "Grand", rows: 49, cols: 49, mines: 450, lives: 10 }
+        };
 
         let config;
         let board = [], revealed = [], flagged = [];
@@ -291,79 +296,96 @@
         let flagsCount = 0, timeElapsed = 0, timerInterval;
         let currentLives = 0;
         let currentMineR = -1, currentMineC = -1;
+        
+        // 無盡模式專用變數
+        let playerName = "Guest";
+        let currentLevel = 1;
+        let isEndlessMode = false;
 
+        // DOM
         const boardEl = document.getElementById('game-board');
         const minesEl = document.getElementById('mines-count');
         const timerEl = document.getElementById('timer');
         const faceBtn = document.getElementById('face-btn');
         const diffSelect = document.getElementById('difficulty-select');
         const livesDisplay = document.getElementById('lives-display');
+        const levelDisplay = document.getElementById('level-display');
         const quizModal = document.getElementById('quiz-modal');
-        const qWord = document.getElementById('q-word');
-        const qOptions = document.getElementById('q-options');
+        const lbModal = document.getElementById('leaderboard-modal');
+        
+        // --- 1. 玩家登入 ---
+        function startGameSession() {
+            const inputName = document.getElementById('player-nickname').value.trim();
+            if(!inputName) {
+                alert("請輸入暱稱！");
+                return;
+            }
+            playerName = inputName;
+            document.getElementById('display-name').innerText = playerName;
+            document.getElementById('start-modal').style.display = 'none';
+            initGame();
+        }
 
-        function initGame() {
-            config = difficulties[diffSelect.value];
+        // --- 2. 初始化遊戲 ---
+        function initGame(resetEndless = true) {
+            const diffKey = diffSelect.value;
+            config = difficulties[diffKey];
+            isEndlessMode = (diffKey === "endless");
+
+            // 如果是完全重置 (例如按下笑臉)，或是非無盡模式，重置關卡
+            if (resetEndless || !isEndlessMode) {
+                currentLevel = 1;
+                currentLives = config.lives;
+                timeElapsed = 0;
+            }
+            // 如果是無盡模式的「下一關」，繼承 currentLives 和 timeElapsed，不重置
+
             gameOver = false; firstClick = true;
-            flagsCount = 0; timeElapsed = 0;
-            currentLives = config.lives;
+            flagsCount = 0;
             currentMineR = -1; currentMineC = -1;
             clearInterval(timerInterval);
             
+            // UI 更新
             minesEl.innerText = config.mines.toString().padStart(3, '0');
-            timerEl.innerText = "000";
+            timerEl.innerText = timeElapsed.toString().padStart(3, '0');
             faceBtn.innerText = "🙂";
+            levelDisplay.innerText = currentLevel;
             
             if(config.lives > 50) {
-                livesDisplay.innerText = "∞";
-                livesDisplay.style.color = "green";
+                livesDisplay.innerText = "∞"; livesDisplay.style.color = "green";
             } else {
-                livesDisplay.innerText = config.lives;
-                livesDisplay.style.color = "#000080";
+                livesDisplay.innerText = currentLives; livesDisplay.style.color = "#000080";
             }
             
+            // 建立地圖
             board = Array(config.rows).fill().map(() => Array(config.cols).fill(0));
             revealed = Array(config.rows).fill().map(() => Array(config.cols).fill(false));
             flagged = Array(config.rows).fill().map(() => Array(config.cols).fill(false));
-
             renderBoard();
         }
 
         function renderBoard() {
-            // 設定 Grid 欄位數與寬度 (固定20px)
-            boardEl.style.gridTemplateColumns = `repeat(${config.cols}, 22px)`; 
+            boardEl.style.gridTemplateColumns = `repeat(${config.cols}, 24px)`; 
             boardEl.innerHTML = '';
-            
-            // 效能優化：使用 DocumentFragment 一次插入
             const fragment = document.createDocumentFragment();
-
             for (let r = 0; r < config.rows; r++) {
                 for (let c = 0; c < config.cols; c++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    // 為了效能，對於大圖改用 ID 或直接參考，這裡維持 data 屬性但簡化邏輯
-                    cell.dataset.r = r; 
-                    cell.dataset.c = c;
-                    
+                    cell.dataset.r = r; cell.dataset.c = c;
                     cell.addEventListener('mousedown', (e) => handleInput(e, r, c));
-                    cell.addEventListener('contextmenu', (e) => { 
-                        e.preventDefault(); 
-                        handleRightClick(r, c); 
-                    });
-                    
-                    // 觸控支援
-                    let longPressTimer;
-                    cell.addEventListener('touchstart', () => {
-                        longPressTimer = setTimeout(() => handleRightClick(r, c), 500);
-                    });
-                    cell.addEventListener('touchend', () => clearTimeout(longPressTimer));
-
+                    cell.addEventListener('contextmenu', (e) => { e.preventDefault(); handleRightClick(r, c); });
+                    // 手機長按
+                    let timer;
+                    cell.addEventListener('touchstart', () => timer = setTimeout(() => handleRightClick(r, c), 500));
+                    cell.addEventListener('touchend', () => clearTimeout(timer));
                     fragment.appendChild(cell);
                 }
             }
             boardEl.appendChild(fragment);
         }
 
+        // --- 3. 遊戲邏輯 ---
         function handleInput(e, r, c) {
             if (gameOver) return;
             if (e.button === 0) handleLeftClick(r, c);
@@ -371,20 +393,15 @@
 
         function handleLeftClick(r, c) {
             if (flagged[r][c] || revealed[r][c]) return;
-
             if (firstClick) {
                 firstClick = false;
                 placeMines(r, c);
                 startTimer();
             }
-
             const val = board[r][c];
             if (val === -1) {
-                if (currentLives > 0) {
-                    triggerQuiz(r, c);
-                } else {
-                    triggerGameOver(false, r, c);
-                }
+                if (currentLives > 0) triggerQuiz(r, c);
+                else triggerGameOver(false, r, c);
             } else {
                 revealCell(r, c);
                 checkWin();
@@ -414,10 +431,7 @@
                 board[r][c] = -1;
                 placed++;
             }
-            calculateNumbers();
-        }
-
-        function calculateNumbers() {
+            // 計算數字
             for (let r = 0; r < config.rows; r++) {
                 for (let c = 0; c < config.cols; c++) {
                     if (board[r][c] === -1) continue;
@@ -431,40 +445,36 @@
         }
 
         function revealCell(r, c) {
-            // 使用堆疊 (Stack) 取代遞迴，防止 64x64 大圖導致堆疊溢位 (Stack Overflow)
+            // BFS 展開
             const stack = [[r, c]];
-            
             while(stack.length > 0) {
                 const [currR, currC] = stack.pop();
-                
                 if (currR < 0 || currR >= config.rows || currC < 0 || currC >= config.cols) continue;
                 if (revealed[currR][currC] || flagged[currR][currC]) continue;
-
+                
                 revealed[currR][currC] = true;
                 const cell = getCellEl(currR, currC);
                 const val = board[currR][currC];
-                
                 cell.classList.add('revealed');
                 
                 if (val > 0) {
-                    cell.innerText = val; 
-                    cell.classList.add('c' + val);
+                    cell.innerText = val; cell.classList.add('c' + val);
                 } else if (val === 0) {
-                    // 如果是0，將周圍加入堆疊
                     for (let i = currR-1; i <= currR+1; i++)
-                        for (let j = currC-1; j <= currC+1; j++)
-                             stack.push([i, j]);
+                        for (let j = currC-1; j <= currC+1; j++) stack.push([i, j]);
                 }
             }
         }
 
+        // --- 4. 測驗與復活 ---
         function triggerQuiz(r, c) {
             currentMineR = r; currentMineC = c;
-            
             const qIndex = Math.floor(Math.random() * vocabList.length);
             const correctVocab = vocabList[qIndex];
             
-            qWord.innerText = correctVocab.w; qOptions.innerHTML = '';
+            document.getElementById('q-word').innerText = correctVocab.w; 
+            const qOptions = document.getElementById('q-options');
+            qOptions.innerHTML = '';
 
             let options = [correctVocab.m];
             while (options.length < 3) {
@@ -490,14 +500,13 @@
                     livesDisplay.innerText = currentLives;
                     if(currentLives === 0) livesDisplay.style.color = "red";
                 }
-                alert("✅ 答對！拆彈成功！\n(剩餘次數: " + (config.lives>50?"∞":currentLives) + ")");
+                alert("✅ 答對！拆彈成功");
                 
                 if (!flagged[currentMineR][currentMineC]) {
                     flagged[currentMineR][currentMineC] = true;
                     flagsCount++;
                     const cell = getCellEl(currentMineR, currentMineC);
-                    cell.innerText = "🚩";
-                    cell.classList.add('flag');
+                    cell.innerText = "🚩"; cell.classList.add('flag');
                     minesEl.innerText = (config.mines - flagsCount).toString().padStart(3, '0');
                 }
                 checkWin();
@@ -507,44 +516,7 @@
             }
         }
 
-        function triggerGameOver(win, hitR, hitC) {
-            gameOver = true;
-            clearInterval(timerInterval);
-            if (win) {
-                faceBtn.innerText = "😎";
-                setTimeout(() => alert("🎉 恭喜通關！\n耗時: " + timeElapsed + " 秒"), 100);
-            } else {
-                faceBtn.innerText = "😵";
-                if (hitR !== undefined) {
-                    const hitCell = getCellEl(hitR, hitC);
-                    hitCell.classList.add('mine');
-                    hitCell.style.backgroundColor = "red";
-                }
-                // 顯示所有地雷，大圖時使用 setTimeout 分批顯示避免卡頓 (但這裡為了簡單直接跑)
-                for (let r = 0; r < config.rows; r++) {
-                    for (let c = 0; c < config.cols; c++) {
-                        if (board[r][c] === -1 && !flagged[r][c]) {
-                            const cell = getCellEl(r, c);
-                            cell.innerText = "💣";
-                            if (r !== hitR || c !== hitC) cell.classList.add('revealed');
-                        } else if (flagged[r][c] && board[r][c] !== -1) {
-                             const cell = getCellEl(r, c);
-                             cell.innerText = "❌";
-                        }
-                    }
-                }
-            }
-        }
-
-        function getCellEl(r, c) { return boardEl.children[r * config.cols + c]; }
-        
-        function startTimer() {
-            timerInterval = setInterval(() => {
-                timeElapsed++;
-                if (timeElapsed > 9999) timeElapsed = 9999;
-                timerEl.innerText = timeElapsed.toString().padStart(3, '0');
-            }, 1000);
-        }
+        // --- 5. 勝利與結束 ---
         function checkWin() {
             let safeUnrevealed = 0;
             for (let r = 0; r < config.rows; r++) {
@@ -552,17 +524,116 @@
                     if (board[r][c] !== -1 && !revealed[r][c]) safeUnrevealed++;
                 }
             }
-            if (safeUnrevealed === 0) triggerGameOver(true);
+            if (safeUnrevealed === 0) {
+                // 贏了
+                if (isEndlessMode) {
+                    // 無盡模式：進入下一關
+                    alert(`🎉 恭喜通過第 ${currentLevel} 關！\n準備進入下一關...`);
+                    currentLevel++;
+                    initGame(false); // false 代表不重置命數
+                } else {
+                    // 普通模式：結束
+                    triggerGameOver(true);
+                }
+            }
         }
 
-        faceBtn.addEventListener('click', initGame);
-        diffSelect.addEventListener('change', initGame);
-        
-        // 防止右鍵選單干擾
-        document.addEventListener('contextmenu', event => event.preventDefault());
-        
-        initGame();
+        function triggerGameOver(win, hitR, hitC) {
+            gameOver = true;
+            clearInterval(timerInterval);
+            
+            if (win) {
+                faceBtn.innerText = "😎";
+                alert("🎉 恭喜通關！");
+            } else {
+                faceBtn.innerText = "😵";
+                // 顯示炸彈
+                if (hitR !== undefined) {
+                    const hitCell = getCellEl(hitR, hitC);
+                    hitCell.classList.add('mine'); hitCell.style.backgroundColor = "red";
+                }
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols; c++) {
+                        if (board[r][c] === -1 && !flagged[r][c]) {
+                            const cell = getCellEl(r, c);
+                            cell.innerText = "💣"; 
+                            if(r!==hitR||c!==hitC) cell.classList.add('revealed');
+                        }
+                    }
+                }
+                
+                // 無盡模式死亡，儲存紀錄並顯示排行榜
+                if (isEndlessMode) {
+                    saveScore(playerName, currentLevel, timeElapsed);
+                    setTimeout(() => {
+                        alert(`😭 遊戲結束！您撐到了第 ${currentLevel} 關`);
+                        showLeaderboard();
+                    }, 1000);
+                }
+            }
+        }
 
+        // --- 6. 排行榜系統 (Local Storage) ---
+        function saveScore(name, level, time) {
+            let scores = JSON.parse(localStorage.getItem('minesweeper_scores')) || [];
+            scores.push({ name: name, level: level, time: time, date: new Date().toLocaleDateString() });
+            
+            // 排序：關卡多者優先，關卡相同則時間少者優先
+            scores.sort((a, b) => {
+                if (b.level !== a.level) return b.level - a.level;
+                return a.time - b.time;
+            });
+            
+            // 只留前 10 名
+            if (scores.length > 10) scores = scores.slice(0, 10);
+            
+            localStorage.setItem('minesweeper_scores', JSON.stringify(scores));
+        }
+
+        function showLeaderboard() {
+            const scores = JSON.parse(localStorage.getItem('minesweeper_scores')) || [];
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '';
+
+            if (scores.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">尚無紀錄，快來挑戰！</td></tr>';
+            } else {
+                scores.forEach((s, index) => {
+                    const row = document.createElement('tr');
+                    // 標記當前玩家剛剛的紀錄 (簡單判定名字相同且關卡數接近)
+                    if (s.name === playerName && s.level === currentLevel && isEndlessMode && gameOver) {
+                        row.classList.add('current-run');
+                    }
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${s.name}</td>
+                        <td>Level ${s.level}</td>
+                        <td>${s.time}s</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            lbModal.style.display = 'flex';
+        }
+
+        function closeLeaderboard() {
+            lbModal.style.display = 'none';
+        }
+
+        // --- Utils & Listeners ---
+        function getCellEl(r, c) { return boardEl.children[r * config.cols + c]; }
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeElapsed++;
+                timerEl.innerText = timeElapsed.toString().padStart(3, '0');
+            }, 1000);
+        }
+
+        faceBtn.addEventListener('click', () => initGame(true)); // 笑臉重置整個遊戲
+        diffSelect.addEventListener('change', () => initGame(true));
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // 初始不載入遊戲，等待輸入暱稱
     </script>
 </body>
 </html>
