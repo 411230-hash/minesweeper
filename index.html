@@ -158,4 +158,443 @@
         .quiz-word { 
             font-size: 32px; 
             color: #222; 
-            font-weight: 800;
+            font-weight: 800; 
+            margin: 20px 0; 
+            padding: 10px;
+            background: #fff;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+        }
+        
+        .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+        
+        .quiz-options button {
+            padding: 14px;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 17px;
+            text-align: left;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .quiz-options button:hover { 
+            background: #e9ecef; 
+            border-color: #0056b3; 
+            color: #0056b3;
+            transform: translateX(5px);
+        }
+        .quiz-options button:active { transform: scale(0.98); }
+
+    </style>
+</head>
+<body>
+
+    <div class="window">
+        <div class="controls">
+            <select id="difficulty-select">
+                <option value="0">Lv1. 入門 (練習用) - 無限復活</option>
+                <option value="1" selected>Lv2. 中級 (9x9) - 3次機會</option>
+                <option value="2">Lv3. 高級 (16x16) - 4次機會</option>
+                <option value="3">Lv4. 地獄 (30x16) - 5次機會</option>
+            </select>
+            <div class="status-info">❤️ 復活機會: <span id="lives-display">3</span></div>
+        </div>
+
+        <div class="header">
+            <div id="mines-count" class="counter">010</div>
+            <div id="face-btn" class="face-btn">🙂</div>
+            <div id="timer" class="counter">000</div>
+        </div>
+
+        <div id="game-board"></div>
+    </div>
+
+    <div id="quiz-modal">
+        <div class="quiz-box">
+            <div class="quiz-header">💥 觸發地雷！</div>
+            <div class="quiz-sub">回答正確單字意思即可拆彈復活！</div>
+            
+            <div id="q-word" class="quiz-word">Vocabulary</div>
+            <div id="q-options" class="quiz-options"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 📚 高中單字庫 (Level 3-5 核心字彙) ---
+        const vocabList = [
+            // Level 3-4 (核心)
+            { w: "Accommodate", m: "容納；提供住宿" },
+            { w: "Acquire", m: "獲得；習得" },
+            { w: "Aggressive", m: "侵略性的；積極的" },
+            { w: "Ambiguous", m: "模稜兩可的" },
+            { w: "Analyze", m: "分析" },
+            { w: "Annual", m: "年度的" },
+            { w: "Anxiety", m: "焦慮" },
+            { w: "Appreciate", m: "感激；欣賞" },
+            { w: "Artificial", m: "人造的" },
+            { w: "Associate", m: "聯想；結交" },
+            { w: "Candidate", m: "候選人" },
+            { w: "Capacity", m: "容量；能力" },
+            { w: "Characteristic", m: "特徵" },
+            { w: "Circumstance", m: "情況；環境" },
+            { w: "Collapse", m: "倒塌；崩潰" },
+            { w: "Commitment", m: "承諾；投入" },
+            { w: "Competitive", m: "有競爭力的" },
+            { w: "Consequence", m: "後果" },
+            { w: "Conservative", m: "保守的" },
+            { w: "Convention", m: "大會；習俗" },
+            { w: "Demonstrate", m: "示範；證明" },
+            { w: "Disaster", m: "災難" },
+            { w: "Distinguish", m: "區別；分辨" },
+            { w: "Dramatic", m: "戲劇性的；急劇的" },
+            { w: "Economical", m: "實惠的；節省的" },
+            { w: "Efficient", m: "有效率的" },
+            { w: "Eliminate", m: "消除；淘汰" },
+            { w: "Emphasis", m: "強調" },
+            { w: "Encounter", m: "遭遇；邂逅" },
+            { w: "Establish", m: "建立" },
+            { w: "Estimate", m: "估計" },
+            { w: "Evaluate", m: "評估" },
+            { w: "Exaggerate", m: "誇張" },
+            { w: "Exhausted", m: "筋疲力盡的" },
+            { w: "Financial", m: "財務的" },
+            { w: "Fundamental", m: "基礎的" },
+            { w: "Guarantee", m: "保證" },
+            { w: "Hesitate", m: "猶豫" },
+            { w: "Identify", m: "識別；認出" },
+            { w: "Illustrate", m: "說明；繪圖" },
+            { w: "Immediate", m: "立即的" },
+            { w: "Innocent", m: "無辜的；天真的" },
+            { w: "Inspire", m: "鼓舞；激發靈感" },
+            { w: "Interaction", m: "互動" },
+            { w: "Investigate", m: "調查" },
+            { w: "Involve", m: "牽涉；包含" },
+            
+            // Level 5-6 (進階)
+            { w: "Accumulate", m: "累積" },
+            { w: "Advocate", m: "提倡；主張" },
+            { w: "Breach", m: "違法；違反" },
+            { w: "Coincide", m: "巧合；同時發生" },
+            { w: "Collaboration", m: "合作" },
+            { w: "Comprehensive", m: "全面的" },
+            { w: "Contradict", m: "反駁；與...矛盾" },
+            { w: "Criteria", m: "標準 (複數)" },
+            { w: "Curriculum", m: "課程" },
+            { w: "Deprive", m: "剝奪" },
+            { w: "Deteriorate", m: "惡化" },
+            { w: "Dilemma", m: "進退兩難的困境" },
+            { w: "Discrimination", m: "歧視" },
+            { w: "Domestic", m: "家庭的；國內的" },
+            { w: "Eligible", m: "有資格的" },
+            { w: "Explicit", m: "明確的；詳盡的" },
+            { w: "Fluctuate", m: "波動" },
+            { w: "Hierarchy", m: "階級制度" },
+            { w: "Hostile", m: "有敵意的" },
+            { w: "Hypothesis", m: "假說" },
+            { w: "Implement", m: "實施" },
+            { w: "Indifferent", m: "冷漠的" },
+            { w: "Inevitable", m: "不可避免的" },
+            { w: "Infrastructure", m: "基礎建設" },
+            { w: "Inherit", m: "繼承" },
+            { w: "Initiative", m: "主動權；倡議" },
+            { w: "Innovation", m: "創新" },
+            { w: "Intervene", m: "介入；干涉" },
+            { w: "Intuition", m: "直覺" },
+            { w: "Legislation", m: "法規；立法" },
+            { w: "Mechanism", m: "機制" },
+            { w: "Negotiate", m: "談判" },
+            { w: "Notorious", m: "惡名昭彰的" },
+            { w: "Obstacle", m: "障礙" },
+            { w: "Optimistic", m: "樂觀的" },
+            { w: "Pessimistic", m: "悲觀的" },
+            { w: "Phenomenon", m: "現象" },
+            { w: "Potential", m: "潛在的" },
+            { w: "Preliminary", m: "初步的" },
+            { w: "Privilege", m: "特權" },
+            { w: "Prosperous", m: "繁榮的" },
+            { w: "Psychological", m: "心理的" },
+            { w: "Reluctant", m: "不情願的" },
+            { w: "Sophisticated", m: "精密的；世故的" },
+            { w: "Spectacular", m: "壯觀的" },
+            { w: "Spontaneous", m: "自發的" },
+            { w: "Suspicious", m: "懷疑的" },
+            { w: "Tolerate", m: "忍受" },
+            { w: "Transformation", m: "轉變" },
+            { w: "Unanimous", m: "全體一致的" },
+            { w: "Vulnerable", m: "易受傷的；脆弱的" },
+            { w: "Welfare", m: "福利" }
+        ];
+
+        // --- 遊戲參數與邏輯 ---
+        const difficulties = [
+            { name: "Entry", rows: 8, cols: 8, mines: 8, lives: 99 }, // 練習: 無限
+            { name: "Medium", rows: 9, cols: 9, mines: 10, lives: 3 }, // 中級: 3次
+            { name: "Hard", rows: 16, cols: 16, mines: 40, lives: 4 }, // 高級: 4次
+            { name: "Hell", rows: 16, cols: 30, mines: 99, lives: 5 }  // 地獄: 5次
+        ];
+
+        let config;
+        let board = [], revealed = [], flagged = [];
+        let gameOver = false, firstClick = true;
+        let flagsCount = 0, timeElapsed = 0, timerInterval;
+        let currentLives = 0;
+        let currentMineR = -1, currentMineC = -1;
+
+        // DOM 元素
+        const boardEl = document.getElementById('game-board');
+        const minesEl = document.getElementById('mines-count');
+        const timerEl = document.getElementById('timer');
+        const faceBtn = document.getElementById('face-btn');
+        const diffSelect = document.getElementById('difficulty-select');
+        const livesDisplay = document.getElementById('lives-display');
+        const quizModal = document.getElementById('quiz-modal');
+        const qWord = document.getElementById('q-word');
+        const qOptions = document.getElementById('q-options');
+
+        function initGame() {
+            config = difficulties[diffSelect.value];
+            gameOver = false; firstClick = true;
+            flagsCount = 0; timeElapsed = 0;
+            currentLives = config.lives;
+            currentMineR = -1; currentMineC = -1;
+            clearInterval(timerInterval);
+            
+            minesEl.innerText = config.mines.toString().padStart(3, '0');
+            timerEl.innerText = "000";
+            faceBtn.innerText = "🙂";
+            
+            // 更新生命值顯示
+            if(config.lives > 50) {
+                livesDisplay.innerText = "∞";
+                livesDisplay.style.color = "green";
+            } else {
+                livesDisplay.innerText = config.lives;
+                livesDisplay.style.color = "#000080";
+            }
+            
+            // 建立陣列
+            board = Array(config.rows).fill().map(() => Array(config.cols).fill(0));
+            revealed = Array(config.rows).fill().map(() => Array(config.cols).fill(false));
+            flagged = Array(config.rows).fill().map(() => Array(config.cols).fill(false));
+
+            renderBoard();
+        }
+
+        function renderBoard() {
+            boardEl.style.gridTemplateColumns = `repeat(${config.cols}, auto)`;
+            boardEl.innerHTML = '';
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.r = r; cell.dataset.c = c;
+                    
+                    cell.addEventListener('mousedown', (e) => handleInput(e, r, c));
+                    cell.addEventListener('contextmenu', (e) => { 
+                        e.preventDefault(); 
+                        handleRightClick(r, c); 
+                    });
+                    
+                    // 手機長按支援 (模擬右鍵)
+                    let longPressTimer;
+                    cell.addEventListener('touchstart', () => {
+                        longPressTimer = setTimeout(() => handleRightClick(r, c), 500);
+                    });
+                    cell.addEventListener('touchend', () => clearTimeout(longPressTimer));
+
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function handleInput(e, r, c) {
+            if (gameOver) return;
+            if (e.button === 0) handleLeftClick(r, c);
+        }
+
+        function handleLeftClick(r, c) {
+            if (flagged[r][c] || revealed[r][c]) return;
+
+            if (firstClick) {
+                firstClick = false;
+                placeMines(r, c);
+                startTimer();
+            }
+
+            const val = board[r][c];
+            if (val === -1) {
+                if (currentLives > 0) {
+                    triggerQuiz(r, c);
+                } else {
+                    triggerGameOver(false, r, c);
+                }
+            } else {
+                revealCell(r, c);
+                checkWin();
+            }
+        }
+
+        function handleRightClick(r, c) {
+            if (gameOver || revealed[r][c]) return;
+            const cell = getCellEl(r, c);
+            if (flagged[r][c]) {
+                flagged[r][c] = false; flagsCount--;
+                cell.innerText = ""; cell.classList.remove('flag');
+            } else {
+                flagged[r][c] = true; flagsCount++;
+                cell.innerText = "🚩"; cell.classList.add('flag');
+            }
+            minesEl.innerText = (config.mines - flagsCount).toString().padStart(3, '0');
+        }
+
+        function placeMines(safeR, safeC) {
+            let placed = 0;
+            while (placed < config.mines) {
+                let r = Math.floor(Math.random() * config.rows);
+                let c = Math.floor(Math.random() * config.cols);
+                if (Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1) continue;
+                if (board[r][c] === -1) continue;
+                board[r][c] = -1;
+                placed++;
+            }
+            calculateNumbers();
+        }
+
+        function calculateNumbers() {
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
+                    if (board[r][c] === -1) continue;
+                    let count = 0;
+                    for (let i = r-1; i <= r+1; i++)
+                        for (let j = c-1; j <= c+1; j++)
+                            if (i>=0 && i<config.rows && j>=0 && j<config.cols && board[i][j] === -1) count++;
+                    board[r][c] = count;
+                }
+            }
+        }
+
+        function revealCell(r, c) {
+            if (r<0 || r>=config.rows || c<0 || c>=config.cols || revealed[r][c] || flagged[r][c]) return;
+            revealed[r][c] = true;
+            const cell = getCellEl(r, c);
+            const val = board[r][c];
+            cell.classList.add('revealed');
+            if (val > 0) {
+                cell.innerText = val; cell.classList.add('c' + val);
+            } else if (val === 0) {
+                for (let i = r-1; i <= r+1; i++)
+                    for (let j = c-1; j <= c+1; j++) revealCell(i, j);
+            }
+        }
+
+        // --- 單字測驗邏輯 ---
+        function triggerQuiz(r, c) {
+            currentMineR = r;
+            currentMineC = c;
+            
+            const qIndex = Math.floor(Math.random() * vocabList.length);
+            const correctVocab = vocabList[qIndex];
+            
+            qWord.innerText = correctVocab.w; 
+            qOptions.innerHTML = '';
+
+            let options = [correctVocab.m];
+            while (options.length < 3) {
+                let randomVocab = vocabList[Math.floor(Math.random() * vocabList.length)];
+                if (!options.includes(randomVocab.m)) options.push(randomVocab.m);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            options.forEach(optText => {
+                const btn = document.createElement('button');
+                btn.innerText = optText;
+                btn.onclick = () => checkAnswer(optText, correctVocab.m);
+                qOptions.appendChild(btn);
+            });
+
+            quizModal.style.display = "flex";
+        }
+
+        function checkAnswer(userAns, correctAns) {
+            quizModal.style.display = "none";
+
+            if (userAns === correctAns) {
+                currentLives--;
+                
+                if(config.lives < 50) { // 只有非練習模式才扣血並檢查
+                    livesDisplay.innerText = currentLives;
+                    if(currentLives === 0) livesDisplay.style.color = "red";
+                }
+
+                alert("✅ 答對了！危機解除！\n(剩餘復活次數: " + (config.lives > 50 ? "∞" : currentLives) + ")");
+                
+                if (!flagged[currentMineR][currentMineC]) {
+                    flagged[currentMineR][currentMineC] = true;
+                    flagsCount++;
+                    const cell = getCellEl(currentMineR, currentMineC);
+                    cell.innerText = "🚩";
+                    cell.classList.add('flag');
+                    minesEl.innerText = (config.mines - flagsCount).toString().padStart(3, '0');
+                }
+                checkWin();
+            } else {
+                alert("❌ 答錯了！\n正確答案是: " + correctAns);
+                triggerGameOver(false, currentMineR, currentMineC);
+            }
+        }
+
+        function triggerGameOver(win, hitR, hitC) {
+            gameOver = true;
+            clearInterval(timerInterval);
+            if (win) {
+                faceBtn.innerText = "😎";
+                setTimeout(() => alert("🎉 恭喜過關！\n單字大師就是你！耗時 " + timeElapsed + " 秒"), 100);
+            } else {
+                faceBtn.innerText = "😵";
+                if (hitR !== undefined) {
+                    const hitCell = getCellEl(hitR, hitC);
+                    hitCell.classList.add('mine');
+                    hitCell.style.backgroundColor = "red";
+                }
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols; c++) {
+                        if (board[r][c] === -1 && !flagged[r][c]) {
+                            const cell = getCellEl(r, c);
+                            cell.innerText = "💣";
+                            if (r !== hitR || c !== hitC) cell.classList.add('revealed');
+                        } else if (flagged[r][c] && board[r][c] !== -1) {
+                             const cell = getCellEl(r, c);
+                             cell.innerText = "❌";
+                        }
+                    }
+                }
+            }
+        }
+
+        function getCellEl(r, c) { return document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`); }
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeElapsed++;
+                if (timeElapsed > 999) timeElapsed = 999;
+                timerEl.innerText = timeElapsed.toString().padStart(3, '0');
+            }, 1000);
+        }
+        function checkWin() {
+            let safeUnrevealed = 0;
+            for (let r = 0; r < config.rows; r++) {
+                for (let c = 0; c < config.cols; c++) {
+                    if (board[r][c] !== -1 && !revealed[r][c]) safeUnrevealed++;
+                }
+            }
+            if (safeUnrevealed === 0) triggerGameOver(true);
+        }
+
+        faceBtn.addEventListener('click', initGame);
+        diffSelect.addEventListener('change', initGame);
+        initGame(); // 啟動遊戲
+
+    </script>
+</body>
+</html>
